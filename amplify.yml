@@ -24,7 +24,9 @@ backend:
         - ls -l $(HOME)
         - echo "################### Local env file BEFORE"
         - cat amplify/.config/local-env-info.json
-        - echo "{ \"projectPath\": \"$(pwd)\", \"envName\": \"${AWS_BRANCH}\"}" > amplify/.config/local-env-info.json
+        # - echo "{ \"projectPath\": \"$(pwd)\", \"envName\": \"${AWS_BRANCH}\" }" > amplify/.config/local-env-info.json
+        - >
+          echo "{ \"projectPath\": \"$(pwd)\", \"envName\": \"${AWS_BRANCH}\" }" > amplify/.config/local-env-info.json
         - echo "################### Local env file AFTER"
         - cat amplify/.config/local-env-info.json
         - echo "################### Debugging init END..."
