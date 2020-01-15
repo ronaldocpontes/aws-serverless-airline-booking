@@ -22,6 +22,11 @@ backend:
         - ls -l ../
         - echo "################### Home directory"
         - ls -l $(HOME)
+        - echo "################### Local env file BEFORE"
+        - cat amplify/.config/local-env-info.json
+        - echo "{ \"projectPath\": \"$(pwd)\", \"envName\": \"${AWS_BRANCH}\"}" > amplify/.config/local-env-info.json
+        - echo "################### Local env file AFTER"
+        - cat amplify/.config/local-env-info.json
         - echo "################### Debugging init END..."
         - "# Execute Amplify CLI with the helper script"
         - amplifyPush --simple
