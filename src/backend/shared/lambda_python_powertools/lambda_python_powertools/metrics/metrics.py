@@ -42,21 +42,3 @@ def single_metric(namespace: str = None):
     finally:
         metric_set = metric.serialize_metric_set()
         print(json.dumps(metric_set, indent=4))
-
-
-# TODO - Clean up
-# with single_metric() as m:
-#     m.add_metric(name="ColdStart", unit="Count", value=1)
-#     m.add_dimension(name="function_version", value="$LATEST")
-
-# blah = Metrics()
-# blah.add_metric(name="ColdStart", unit="Count", value=1)
-# blah.add_metric(name="BookingConfirmation", unit="Count", value=1)
-# blah.add_dimension(name="service", value="booking")
-# blah.add_dimension(name="function_version", value="$LATEST")
-
-
-# @blah.log_metrics()
-# @tracer.lambda_handler()
-# def testing():
-#     return True
