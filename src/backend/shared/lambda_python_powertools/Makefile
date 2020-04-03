@@ -4,6 +4,7 @@ target:
 
 dev:
 	pipenv install
+	pipenv install -d
 
 format:
 	pipenv run isort -rc .
