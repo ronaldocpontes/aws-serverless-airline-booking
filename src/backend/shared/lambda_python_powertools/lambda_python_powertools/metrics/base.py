@@ -133,8 +133,6 @@ class MetricManager:
         if dimensions is None:
             dimensions = self.dimension_set
 
-        # FIXME - Root node is incorrect for metric format e.g. should be Metric:Value
-
         dimension_keys: List[str] = list(dimensions.keys())
         metric_names_unit: List[Dict[str, str]] = []
         metric_set: Dict[str, str] = {}
@@ -158,10 +156,10 @@ class MetricManager:
             ]
         }
         metrics_timestamp = {"Timestamp": int(datetime.datetime.now().timestamp() * 1000)}
-        metrics["_aws"] = {**metrics_timestamp, **metrics_definition}
+        metric_set["_aws"] = {**metrics_timestamp, **metrics_definition}
 
         try:
-            jsonschema.validate(metrics, schema=CLOUDWATCH_EMF_SCHEMA)
+            jsonschema.validate(metric_set, schema=CLOUDWATCH_EMF_SCHEMA)
         except jsonschema.exceptions.ValidationError as e:
             full_path = ",".join(e.absolute_schema_path)
             validation = e.validator
@@ -169,7 +167,7 @@ class MetricManager:
             message = f"Invalid format. Error: {error} ({validation}), Invalid item: {full_path}"
             logger.error(e)
             raise ValueError(message)
-        return metrics
+        return metric_set
 
     def add_dimension(self, name: str, value: float = 0):
         self.dimension_set[name] = value
