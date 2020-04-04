@@ -118,8 +118,7 @@ class MetricManager:
         self.namespace = name
 
     def add_metric(self, name: str, unit: str, value: float):
-        # FIXME - Use == over > to correct logic
-        if len(self.metric_set) > 100:
+        if len(self.metric_set) == 100:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
             print(json.dumps(metrics, indent=4))
