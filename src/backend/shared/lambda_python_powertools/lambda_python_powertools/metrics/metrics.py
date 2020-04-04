@@ -33,7 +33,7 @@ class Metrics(MetricManager):
 
 
 @contextmanager
-def single_metric(namespace: str = None):
+def single_metric(namespace: str = None) -> MetricManager:
     try:
         metric = MetricManager()
         yield metric
