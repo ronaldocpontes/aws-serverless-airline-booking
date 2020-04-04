@@ -23,6 +23,7 @@ pytest-mock = "*"
 
 [packages]
 lambda-python-powertools = {editable = true,path = "."}
+jsonschema = "*"
 
 [pipenv]
 allow_prereleases = true

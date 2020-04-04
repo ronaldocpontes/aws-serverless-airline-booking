@@ -5,16 +5,120 @@ import logging
 import os
 from typing import Dict, List
 
+import jsonschema
+
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
+CLOUDWATCH_EMF_SCHEMA = {
+    "type": "object",
+    "title": "Root Node",
+    "required": ["_aws"],
+    "properties": {
+        "_aws": {
+            "$id": "#/properties/_aws",
+            "type": "object",
+            "title": "Metadata",
+            "required": ["Timestamp", "CloudWatchMetrics"],
+            "properties": {
+                "Timestamp": {
+                    "$id": "#/properties/_aws/properties/Timestamp",
+                    "type": "integer",
+                    "title": "The Timestamp Schema",
+                    "examples": [1565375354953],
+                },
+                "CloudWatchMetrics": {
+                    "$id": "#/properties/_aws/properties/CloudWatchMetrics",
+                    "type": "array",
+                    "title": "MetricDirectives",
+                    "items": {
+                        "$id": "#/properties/_aws/properties/CloudWatchMetrics/items",
+                        "type": "object",
+                        "title": "MetricDirective",
+                        "required": ["Namespace", "Dimensions", "Metrics"],
+                        "properties": {
+                            "Namespace": {
+                                "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Namespace",
+                                "type": "string",
+                                "title": "CloudWatch Metrics Namespace",
+                                "examples": ["MyApp"],
+                                "pattern": "^(.*)$",
+                                "minLength": 1,
+                            },
+                            "Dimensions": {
+                                "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Dimensions",
+                                "type": "array",
+                                "title": "The Dimensions Schema",
+                                "minItems": 1,
+                                "items": {
+                                    "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Dimensions/items",
+                                    "type": "array",
+                                    "title": "DimensionSet",
+                                    "minItems": 1,
+                                    "maxItems": 9,
+                                    "items": {
+                                        "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Dimensions/items/items",
+                                        "type": "string",
+                                        "title": "DimensionReference",
+                                        "examples": ["Operation"],
+                                        "pattern": "^(.*)$",
+                                        "minItems": 1,
+                                    },
+                                },
+                            },
+                            "Metrics": {
+                                "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics",
+                                "type": "array",
+                                "title": "MetricDefinitions",
+                                "items": {
+                                    "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items",
+                                    "type": "object",
+                                    "title": "MetricDefinition",
+                                    "required": ["Name"],
+                                    "properties": {
+                                        "Name": {
+                                            "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items/properties/Name",
+                                            "type": "string",
+                                            "title": "MetricName",
+                                            "examples": ["ProcessingLatency"],
+                                            "pattern": "^(.*)$",
+                                        },
+                                        "Unit": {
+                                            "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items/properties/Unit",
+                                            "type": "string",
+                                            "title": "MetricUnit",
+                                            "examples": ["Milliseconds"],
+                                            "pattern": "^(Seconds|Microseconds|Milliseconds|Bytes|Kilobytes|Megabytes|Gigabytes|Terabytes|Bits|Kilobits|Megabits|Gigabits|Terabits|Percent|Count|Bytes\\/Second|Kilobytes\\/Second|Megabytes\\/Second|Gigabytes\\/Second|Terabytes\\/Second|Bits\\/Second|Kilobits\\/Second|Megabits\\/Second|Gigabits\\/Second|Terabits\\/Second|Count\\/Second|None)$",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }
+    },
+}
+
 
 class MetricManager:
-    def __init__(self, metric_set: Dict[str, str] = None, dimension_set: Dict = None):
+    def __init__(
+        self, metric_set: Dict[str, str] = None, dimension_set: Dict = None, namespace: str = None
+    ):
         self.metric_set = metric_set or collections.defaultdict()
         self.dimension_set = dimension_set or collections.defaultdict()
+        self.namespace = os.getenv("POWERTOOLS_METRICS_NAMESPACE") or namespace
+
+    def add_namespace(self, name: str):
+        if self.namespace is not None:
+            logger.debug(
+                f"Namespace already set. Replacing '{self.namespace}' with '{self.namespace}'"
+            )
+        self.namespace = name
 
     def add_metric(self, name: str, unit: str, value: float):
+        # FIXME - Use == over > to correct logic
         if len(self.metric_set) > 100:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
@@ -29,6 +133,8 @@ class MetricManager:
 
         if dimensions is None:
             dimensions = self.dimension_set
+
+        # FIXME - Root node is incorrect for metric format e.g. should be Metric:Value
 
         dimension_keys: List[str] = list(dimensions.keys())
         metric_names_unit: List[Dict[str, str]] = []
@@ -53,16 +159,18 @@ class MetricManager:
             ]
         }
         metrics_timestamp = {"Timestamp": int(datetime.datetime.now().timestamp() * 1000)}
-
         metrics["_aws"] = {**metrics_timestamp, **metrics_definition}
 
+        try:
+            jsonschema.validate(metrics, schema=CLOUDWATCH_EMF_SCHEMA)
+        except jsonschema.exceptions.ValidationError as e:
+            full_path = ",".join(e.absolute_schema_path)
+            validation = e.validator
+            error = e.message  # noqa: B306
+            message = f"Invalid format. Error: {error} ({validation}), Invalid item: {full_path}"
+            logger.error(e)
+            raise ValueError(message)
         return metrics
 
     def add_dimension(self, name: str, value: float = 0):
-        if len(self.dimension_set) > 9:
-            raise ValueError("Exceeded maximum of 9 dimensions that can be associated with metrics")
-
-        if not value:
-            raise ValueError("Dimension value cannot be 0")
-
         self.dimension_set[name] = value
