@@ -7,6 +7,8 @@ from typing import Dict, List
 
 import jsonschema
 
+from lambda_python_powertools.helper.models import MetricUnit
+
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -112,18 +114,29 @@ class MetricManager:
 
     def add_namespace(self, name: str):
         if self.namespace is not None:
-            logger.debug(
+            logger.warning(
                 f"Namespace already set. Replacing '{self.namespace}' with '{self.namespace}'"
             )
+        logger.debug(f"Adding metrics namespace: {name}")
         self.namespace = name
 
-    def add_metric(self, name: str, unit: str, value: float):
+    def add_metric(self, name: str, unit: MetricUnit, value: float):
         if len(self.metric_set) == 100:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
             print(json.dumps(metrics, indent=4))
 
-        metric = {"Unit": unit, "Value": value}
+        if not isinstance(unit, MetricUnit):
+            try:
+                unit = MetricUnit[unit]
+            except KeyError:
+                unit_options = list(MetricUnit.__members__)
+                raise ValueError(
+                    f"Invalid metric unit '{unit}', expected either option: {unit_options}"
+                )
+
+        metric = {"Unit": unit.value, "Value": value}
+        logger.debug(f"Adding metric: {name} with {metric}")
         self.metric_set[name] = metric
 
     def serialize_metric_set(self, metrics: Dict = None, dimensions: Dict = None) -> Dict:
@@ -132,6 +145,8 @@ class MetricManager:
 
         if dimensions is None:
             dimensions = self.dimension_set
+
+        logger.debug("Serializing...", {"metrics": metrics, "dimensions": dimensions})
 
         dimension_keys: List[str] = list(dimensions.keys())
         metric_names_unit: List[Dict[str, str]] = []
@@ -159,6 +174,7 @@ class MetricManager:
         metric_set["_aws"] = {**metrics_timestamp, **metrics_definition}
 
         try:
+            logger.debug("Validating serialized metrics against CloudWatch EMF schema", metric_set)
             jsonschema.validate(metric_set, schema=CLOUDWATCH_EMF_SCHEMA)
         except jsonschema.exceptions.ValidationError as e:
             full_path = ",".join(e.absolute_schema_path)
@@ -170,4 +186,5 @@ class MetricManager:
         return metric_set
 
     def add_dimension(self, name: str, value: float = 0):
+        logger.debug(f"Adding dimension: {name}:{value}")
         self.dimension_set[name] = value
