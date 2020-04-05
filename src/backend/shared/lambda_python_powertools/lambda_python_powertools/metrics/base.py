@@ -108,8 +108,8 @@ class MetricManager:
     def __init__(
         self, metric_set: Dict[str, str] = None, dimension_set: Dict = None, namespace: str = None
     ):
-        self.metric_set = metric_set or collections.defaultdict()
-        self.dimension_set = dimension_set or collections.defaultdict()
+        self.metric_set = metric_set or {}
+        self.dimension_set = dimension_set or {}
         self.namespace = os.getenv("POWERTOOLS_METRICS_NAMESPACE") or namespace
 
     def add_namespace(self, name: str):

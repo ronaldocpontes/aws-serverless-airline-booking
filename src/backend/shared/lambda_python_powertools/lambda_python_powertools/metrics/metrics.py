@@ -12,12 +12,13 @@ logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
 
 class Metrics(MetricManager):
-    _metrics = collections.defaultdict()
-    _dimensions = collections.defaultdict()
+    _metrics = {}
+    _dimensions = {}
 
-    def __init__(self, metric_set=None, dimension_set=None):
-        self.metric_set = self._metrics
-        self.dimension_set = self._dimensions
+    def __init__(self, metric_set=None, dimension_set=None, namespace=None):
+        super().__init__(
+            metric_set=self._metrics, dimension_set=self._dimensions, namespace=namespace
+        )
 
     def log_metrics(self, fn: Callable[[Any, Any], Any] = None):
         @functools.wraps(fn)
