@@ -3,7 +3,6 @@ import functools
 import json
 import logging
 import os
-from contextlib import contextmanager
 from typing import Any, Callable
 
 from lambda_python_powertools.metrics.base import MetricManager
@@ -30,15 +29,3 @@ class Metrics(MetricManager):
                 raise err
 
         return decorate
-
-
-@contextmanager
-def single_metric(namespace: str = None) -> MetricManager:
-    try:
-        metric = MetricManager()
-        yield metric
-    except Exception as err:
-        raise err
-    finally:
-        metric_set = metric.serialize_metric_set()
-        print(json.dumps(metric_set, indent=4))
