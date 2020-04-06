@@ -2,7 +2,8 @@
 """
 from lambda_python_powertools.helper.models import MetricUnit
 
+from .exceptions import EmfSchemaError, MetricUnitError
 from .metric import single_metric
 from .metrics import Metrics
 
-__all__ = ["Metrics", "single_metric", "MetricUnit"]
+__all__ = ["Metrics", "single_metric", "MetricUnit", "MetricUnitError", "EmfSchemaError"]

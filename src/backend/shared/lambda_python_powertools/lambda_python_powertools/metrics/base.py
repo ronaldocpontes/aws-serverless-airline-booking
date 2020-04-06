@@ -8,6 +8,8 @@ import jsonschema
 
 from lambda_python_powertools.helper.models import MetricUnit
 
+from .exceptions import EmfSchemaError, MetricUnitError
+
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -104,6 +106,30 @@ CLOUDWATCH_EMF_SCHEMA = {
 
 
 class MetricManager:
+    """Base class for metric functionality (namespace, metric, dimension, serialization)
+
+    MetricManager creates metrics asynchronously thanks to CloudWatch Embedded Metric Format (EMF).
+    CloudWatch EMF can create up to 100 metrics per EMF object
+    and metrics, dimensions, and namespace created via MetricManager
+    will adhere to the specification[1], will be serialized and validated against EMF Schema[1].
+
+    Use Metrics and SingleMetric classes to create EMF metrics.
+
+    [1] https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html
+
+    Environment variables
+    ---------------------
+    POWERTOOLS_METRICS_NAMESPACE : str
+        metric namespace
+
+    Raises
+    ------
+    MetricUnitError
+        Raised when metric added doesn't provide correct metric unit.
+    EmfSchemaError
+        Raised when metric object fails EMF schema validation
+    """
+
     def __init__(
         self, metric_set: Dict[str, str] = None, dimension_set: Dict = None, namespace: str = None
     ):
@@ -112,6 +138,19 @@ class MetricManager:
         self.namespace = os.getenv("POWERTOOLS_METRICS_NAMESPACE") or namespace
 
     def add_namespace(self, name: str):
+        """Adds given metric namespace
+
+        Example
+        -------
+        Add metric namespace
+
+            >>> metric.add_namespace(name="ServerlessAirline")
+
+        Parameters
+        ----------
+        name : str
+            Metric namespace
+        """
         if self.namespace is not None:
             logger.warning(
                 f"Namespace already set. Replacing '{self.namespace}' with '{self.namespace}'"
@@ -120,6 +159,32 @@ class MetricManager:
         self.namespace = name
 
     def add_metric(self, name: str, unit: MetricUnit, value: float):
+        """Adds given metric
+
+        Example
+        -------
+        Add given metric using MetricUnit enum
+
+            >>> metric.add_metric(name="BookingConfirmation", unit=MetricUnit.Count, value=1)
+
+        Add given metric using plain string but value unit
+
+            >>> metric.add_metric(name="BookingConfirmation", unit="Count", value=1)
+
+        Parameters
+        ----------
+        name : str
+            Metric name
+        unit : MetricUnit
+            Metric unit (e.g. "Seconds", MetricUnit.Seconds)
+        value : float
+            Metric value
+
+        Raises
+        ------
+        MetricUnitError
+            Raised when metric unit is not supported by CloudWatch
+        """
         if len(self.metric_set) == 100:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
@@ -130,7 +195,7 @@ class MetricManager:
                 unit = MetricUnit[unit]
             except KeyError:
                 unit_options = list(MetricUnit.__members__)
-                raise ValueError(
+                raise MetricUnitError(
                     f"Invalid metric unit '{unit}', expected either option: {unit_options}"
                 )
 
@@ -139,6 +204,32 @@ class MetricManager:
         self.metric_set[name] = metric
 
     def serialize_metric_set(self, metrics: Dict = None, dimensions: Dict = None) -> Dict:
+        """Serializes metric and dimensions set
+
+        Parameters
+        ----------
+        metrics : Dict, optional
+            Dictionary of metrics to serialize, by default None
+        dimensions : Dict, optional
+            Dictionary of dimensions to serialize, by default None
+
+        Example
+        -------
+        Serialize metrics into EMF format
+            >>> metrics = MetricManager()
+            >>> ...add metrics, dimensions, namespace
+            >>> ret = metrics.serialize_metric_set()
+
+        Returns
+        -------
+        Dict
+            Serialized metrics following EMF specification
+
+        Raises
+        ------
+        EmfSchemaError
+            Raised when serialization fail schema validation
+        """
         if metrics is None:
             metrics = self.metric_set
 
@@ -177,9 +268,18 @@ class MetricManager:
             jsonschema.validate(metric_set, schema=CLOUDWATCH_EMF_SCHEMA)
         except jsonschema.exceptions.ValidationError as e:
             message = f"Invalid format. Error: {e.message} ({e.validator}), Invalid item: {e.absolute_schema_path}"  # noqa: B306
-            raise ValueError(message)
+            raise EmfSchemaError(message)
         return metric_set
 
-    def add_dimension(self, name: str, value: float = 0):
+    def add_dimension(self, name: str, value: str):
+        """Adds given dimension to all metrics
+
+        Parameters
+        ----------
+        name : str
+            Dimension name
+        value : str
+            Dimension value
+        """
         logger.debug(f"Adding dimension: {name}:{value}")
         self.dimension_set[name] = value
