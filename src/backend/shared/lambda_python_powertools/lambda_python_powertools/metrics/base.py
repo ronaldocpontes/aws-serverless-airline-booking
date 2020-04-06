@@ -8,7 +8,7 @@ import jsonschema
 
 from lambda_python_powertools.helper.models import MetricUnit
 
-from .exceptions import EmfSchemaError, MetricUnitError
+from .exceptions import SchemaValidationError, MetricUnitError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -126,7 +126,7 @@ class MetricManager:
     ------
     MetricUnitError
         Raised when metric added doesn't provide correct metric unit.
-    EmfSchemaError
+    SchemaValidationError
         Raised when metric object fails EMF schema validation
     """
 
@@ -227,7 +227,7 @@ class MetricManager:
 
         Raises
         ------
-        EmfSchemaError
+        SchemaValidationError
             Raised when serialization fail schema validation
         """
         if metrics is None:
@@ -268,7 +268,7 @@ class MetricManager:
             jsonschema.validate(metric_set, schema=CLOUDWATCH_EMF_SCHEMA)
         except jsonschema.exceptions.ValidationError as e:
             message = f"Invalid format. Error: {e.message} ({e.validator}), Invalid item: {e.absolute_schema_path}"  # noqa: B306
-            raise EmfSchemaError(message)
+            raise SchemaValidationError(message)
         return metric_set
 
     def add_dimension(self, name: str, value: str):

@@ -2,5 +2,5 @@ class MetricUnitError(Exception):
     pass
 
 
-class EmfSchemaError(Exception):
+class SchemaValidationError(Exception):
     pass
