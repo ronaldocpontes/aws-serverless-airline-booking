@@ -5,11 +5,12 @@ from typing import Dict, List
 import pytest
 
 from lambda_python_powertools.metrics import (
-    MetricUnit,
-    single_metric,
     Metrics,
+    MetricUnit,
     MetricUnitError,
+    MetricValueError,
     SchemaValidationError,
+    single_metric,
 )
 from lambda_python_powertools.metrics.base import MetricManager
 
@@ -153,9 +154,10 @@ def test_schema_no_namespace(capsys, metric, dimension):
 
 def test_schema_incorrect_value(capsys, metric, dimension, namespace):
     metric["value"] = True
-    with single_metric(**metric) as m:
-        m.add_dimension(**dimension)
-        m.add_namespace(**namespace)
+    with pytest.raises(MetricValueError):
+        with single_metric(**metric) as m:
+            m.add_dimension(**dimension)
+            m.add_namespace(**namespace)
 
 
 def test_schema_no_metrics(capsys, dimensions, namespace):

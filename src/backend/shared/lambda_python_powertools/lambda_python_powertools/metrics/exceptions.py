@@ -4,3 +4,7 @@ class MetricUnitError(Exception):
 
 class SchemaValidationError(Exception):
     pass
+
+
+class MetricValueError(Exception):
+    pass

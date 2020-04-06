@@ -2,13 +2,13 @@ import datetime
 import json
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import jsonschema
 
 from lambda_python_powertools.helper.models import MetricUnit
 
-from .exceptions import SchemaValidationError, MetricUnitError
+from .exceptions import MetricUnitError, MetricValueError, SchemaValidationError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -161,7 +161,7 @@ class MetricManager:
         logger.debug(f"Adding metrics namespace: {name}")
         self.namespace = name
 
-    def add_metric(self, name: str, unit: MetricUnit, value: float):
+    def add_metric(self, name: str, unit: MetricUnit, value: Union[float, int]):
         """Adds given metric
 
         Example
@@ -192,6 +192,9 @@ class MetricManager:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
             print(json.dumps(metrics, indent=4))
+
+        if not isinstance(value, float) or not isinstance(value, int):
+            raise MetricValueError(f"{value} is not a valid number - Expected float or integer")
 
         if not isinstance(unit, MetricUnit):
             try:
