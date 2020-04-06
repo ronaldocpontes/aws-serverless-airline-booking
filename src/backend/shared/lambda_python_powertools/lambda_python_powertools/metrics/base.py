@@ -73,11 +73,13 @@ CLOUDWATCH_EMF_SCHEMA = {
                                 "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics",
                                 "type": "array",
                                 "title": "MetricDefinitions",
+                                "minItems": 1,
                                 "items": {
                                     "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items",
                                     "type": "object",
                                     "title": "MetricDefinition",
                                     "required": ["Name"],
+                                    "minItems": 1,
                                     "properties": {
                                         "Name": {
                                             "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items/properties/Name",
@@ -85,6 +87,7 @@ CLOUDWATCH_EMF_SCHEMA = {
                                             "title": "MetricName",
                                             "examples": ["ProcessingLatency"],
                                             "pattern": "^(.*)$",
+                                            "minLength": 1,
                                         },
                                         "Unit": {
                                             "$id": "#/properties/_aws/properties/CloudWatchMetrics/items/properties/Metrics/items/properties/Unit",
