@@ -10,6 +10,7 @@ from lambda_python_powertools.metrics import (
     MetricUnitError,
     MetricValueError,
     SchemaValidationError,
+    UniqueNamespaceError,
     single_metric,
 )
 from lambda_python_powertools.metrics.base import MetricManager
@@ -51,32 +52,32 @@ def namespace():
     return {"name": "test_namespace"}
 
 
-def serialize_metrics(metrics: List[Dict], dimensions: List[Dict], namespace: str) -> Dict:
+def serialize_metrics(metrics: List[Dict], dimensions: List[Dict], namespace: Dict) -> Dict:
     """ Helper function to build EMF object from a list of metrics, dimensions """
-    m = MetricManager()
+    my_metrics = MetricManager()
     for metric in metrics:
-        m.add_metric(**metric)
+        my_metrics.add_metric(**metric)
 
     for dimension in dimensions:
-        m.add_dimension(**dimension)
+        my_metrics.add_dimension(**dimension)
 
-    m.add_namespace(name=namespace)
-    return m.serialize_metric_set()
+    my_metrics.add_namespace(**namespace)
+    return my_metrics.serialize_metric_set()
 
 
-def serialize_single_metric(metric: Dict, dimension: Dict, namespace: str) -> Dict:
+def serialize_single_metric(metric: Dict, dimension: Dict, namespace: Dict) -> Dict:
     """ Helper function to build EMF object from a given metric, dimension and namespace """
-    m = MetricManager()
-    m.add_metric(**metric)
-    m.add_dimension(**dimension)
-    m.add_namespace(name=namespace)
-    return m.serialize_metric_set()
+    my_metrics = MetricManager()
+    my_metrics.add_metric(**metric)
+    my_metrics.add_dimension(**dimension)
+    my_metrics.add_namespace(**namespace)
+    return my_metrics.serialize_metric_set()
 
 
 def test_single_metric(capsys, metric, dimension, namespace):
-    with single_metric(**metric) as m:
-        m.add_dimension(**dimension)
-        m.add_namespace(**namespace)
+    with single_metric(**metric) as my_metrics:
+        my_metrics.add_dimension(**dimension)
+        my_metrics.add_namespace(**namespace)
 
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
@@ -88,11 +89,11 @@ def test_single_metric(capsys, metric, dimension, namespace):
 
 
 def test_single_metric_one_metric_only(capsys, metric, dimension, namespace):
-    with single_metric(**metric) as m:
-        m.add_metric(name="second_metric", unit="Count", value=1)
-        m.add_metric(name="third_metric", unit="Seconds", value=1)
-        m.add_dimension(**dimension)
-        m.add_namespace(**namespace)
+    with single_metric(**metric) as my_metrics:
+        my_metrics.add_metric(name="second_metric", unit="Count", value=1)
+        my_metrics.add_metric(name="third_metric", unit="Seconds", value=1)
+        my_metrics.add_dimension(**dimension)
+        my_metrics.add_namespace(**namespace)
 
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
@@ -104,15 +105,15 @@ def test_single_metric_one_metric_only(capsys, metric, dimension, namespace):
 
 
 def test_multiple_metrics(capsys, metrics, dimensions, namespace):
-    m = Metrics()
+    my_metrics = Metrics()
     for metric in metrics:
-        m.add_metric(**metric)
+        my_metrics.add_metric(**metric)
 
     for dimension in dimensions:
-        m.add_dimension(**dimension)
+        my_metrics.add_dimension(**dimension)
 
-    m.add_namespace(namespace)
-    output = m.serialize_metric_set()
+    my_metrics.add_namespace(**namespace)
+    output = my_metrics.serialize_metric_set()
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
     # Timestamp will always be different
@@ -122,19 +123,38 @@ def test_multiple_metrics(capsys, metrics, dimensions, namespace):
 
 
 def test_multiple_namespaces(capsys, metric, dimension, namespace):
-    with single_metric(**metric) as m:
-        m.add_dimension(**dimension)
-        m.add_namespace(**namespace)
-        m.add_namespace(name="OtherNamespace")
-        m.add_namespace(name="AnotherNamespace")
+    namespace_a = {"name": "OtherNamespace"}
+    namespace_b = {"name": "AnotherNamespace"}
 
-    output = json.loads(capsys.readouterr().out.strip())
-    expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
+    with pytest.raises(UniqueNamespaceError):    
+        with single_metric(**metric) as m:
+            m.add_dimension(**dimension)
+            m.add_namespace(**namespace)
+            m.add_namespace(**namespace_a)
+            m.add_namespace(**namespace_b)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
-    assert expected["_aws"] == output["_aws"]
+
+# def test_log_metrics(capsys, metrics, dimensions, namespace):
+#     my_metrics = Metrics()
+
+#     @my_metrics.log_metrics
+#     def lambda_handler(evt, handler):
+#         my_metrics.add_namespace(namespace)
+#         for metric in metrics:
+#             my_metrics.add_metric(**metric)
+#         for dimension in dimensions:
+#             my_metrics.add_dimension(**dimension)
+#             return True
+
+#     lambda_handler({}, {})
+
+# output = my_metrics.serialize_metric_set()
+# expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
+
+# # Timestamp will always be different
+# del expected["_aws"]["Timestamp"]
+# del output["_aws"]["Timestamp"]
+# assert expected["_aws"] == output["_aws"]
 
 
 def test_incorrect_metric_unit(capsys, metric, dimension, namespace):
@@ -153,7 +173,7 @@ def test_schema_no_namespace(capsys, metric, dimension):
 
 
 def test_schema_incorrect_value(capsys, metric, dimension, namespace):
-    metric["value"] = True
+    metric["value"] = "some_value"
     with pytest.raises(MetricValueError):
         with single_metric(**metric) as m:
             m.add_dimension(**dimension)
@@ -161,9 +181,9 @@ def test_schema_incorrect_value(capsys, metric, dimension, namespace):
 
 
 def test_schema_no_metrics(capsys, dimensions, namespace):
-    m = Metrics()
-    m.add_namespace(**namespace)
+    my_metrics = Metrics()
+    my_metrics.add_namespace(**namespace)
     for dimension in dimensions:
-        m.add_dimension(**dimension)
+        my_metrics.add_dimension(**dimension)
     with pytest.raises(SchemaValidationError):
-        m.serialize_metric_set()
+        my_metrics.serialize_metric_set()

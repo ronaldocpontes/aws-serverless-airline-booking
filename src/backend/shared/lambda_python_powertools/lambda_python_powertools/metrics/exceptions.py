@@ -8,3 +8,7 @@ class SchemaValidationError(Exception):
 
 class MetricValueError(Exception):
     pass
+
+
+class UniqueNamespaceError(Exception):
+    pass

@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import numbers
 import os
 from typing import Dict, List, Union
 
@@ -8,7 +9,7 @@ import jsonschema
 
 from lambda_python_powertools.helper.models import MetricUnit
 
-from .exceptions import MetricUnitError, MetricValueError, SchemaValidationError
+from .exceptions import MetricUnitError, MetricValueError, SchemaValidationError, UniqueNamespaceError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -155,9 +156,7 @@ class MetricManager:
             Metric namespace
         """
         if self.namespace is not None:
-            logger.warning(
-                f"Namespace already set. Replacing '{self.namespace}' with '{self.namespace}'"
-            )
+            raise UniqueNamespaceError(f"Namespace '{self.namespace}' already set - Only one namespace is allowed across metrics")
         logger.debug(f"Adding metrics namespace: {name}")
         self.namespace = name
 
@@ -193,8 +192,8 @@ class MetricManager:
             metrics = self.serialize_metric_set()
             print(json.dumps(metrics, indent=4))
 
-        if not isinstance(value, float) or not isinstance(value, int):
-            raise MetricValueError(f"{value} is not a valid number - Expected float or integer")
+        if not isinstance(value, numbers.Number):
+            raise MetricValueError(f"{value} is not a valid number")
 
         if not isinstance(unit, MetricUnit):
             try:
@@ -205,7 +204,7 @@ class MetricManager:
                     f"Invalid metric unit '{unit}', expected either option: {unit_options}"
                 )
 
-        metric = {"Unit": unit.value, "Value": value}
+        metric = {"Unit": unit.value, "Value": float(value)}
         logger.debug(f"Adding metric: {name} with {metric}")
         self.metric_set[name] = metric
 
