@@ -254,7 +254,7 @@ class MetricManager:
         metrics_definition = {
             "CloudWatchMetrics": [
                 {
-                    "Namespace": "ServerlessAirline",
+                    "Namespace": self.namespace,
                     "Dimensions": [dimension_keys],
                     "Metrics": metric_names_unit,
                 }
