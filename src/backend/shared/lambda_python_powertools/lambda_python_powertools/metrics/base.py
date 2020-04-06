@@ -1,4 +1,3 @@
-import collections
 import datetime
 import json
 import logging
@@ -177,11 +176,7 @@ class MetricManager:
             logger.debug("Validating serialized metrics against CloudWatch EMF schema", metric_set)
             jsonschema.validate(metric_set, schema=CLOUDWATCH_EMF_SCHEMA)
         except jsonschema.exceptions.ValidationError as e:
-            full_path = ",".join(e.absolute_schema_path)
-            validation = e.validator
-            error = e.message  # noqa: B306
-            message = f"Invalid format. Error: {error} ({validation}), Invalid item: {full_path}"
-            logger.error(e)
+            message = f"Invalid format. Error: {e.message} ({e.validator}), Invalid item: {e.absolute_schema_path}"  # noqa: B306
             raise ValueError(message)
         return metric_set
 

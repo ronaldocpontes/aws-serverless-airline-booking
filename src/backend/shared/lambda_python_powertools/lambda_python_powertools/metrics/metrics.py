@@ -1,4 +1,3 @@
-import collections
 import functools
 import json
 import logging
@@ -25,8 +24,10 @@ class Metrics(MetricManager):
         def decorate(*args, **kwargs):
             try:
                 metrics = self.serialize_metric_set()
+                logger.debug("Publishing metrics", {"metrics": metrics})
                 print(json.dumps(metrics, indent=4))
-            except Exception as err:
-                raise err
+            except Exception as e:
+                logger.error(e)
+                raise e
 
         return decorate

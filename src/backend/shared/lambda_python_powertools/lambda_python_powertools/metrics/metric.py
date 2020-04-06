@@ -25,8 +25,11 @@ def single_metric(namespace: str) -> SingleMetric:
     try:
         metric: SingleMetric = SingleMetric(namespace=namespace)
         yield metric
+        logger.debug("Serializing single metric")
         metric_set: Dict = metric.serialize_metric_set()
-    except Exception as err:
-        raise err
+    except Exception as e:
+        logger.error(e)
+        raise e
     finally:
+        logger.debug("Publishing single metric", {"metric": metric})
         print(json.dumps(metric_set, indent=4))
