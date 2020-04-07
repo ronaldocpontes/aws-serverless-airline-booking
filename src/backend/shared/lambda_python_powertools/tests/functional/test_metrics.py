@@ -180,6 +180,22 @@ def test_log_metrics_call_function(capsys, metrics, dimensions, namespace):
     assert expected["_aws"] == output["_aws"]
 
 
+def test_namespace_env_var(monkeypatch, capsys, metric, dimension, namespace):
+    monkeypatch.setenv("POWERTOOLS_METRICS_NAMESPACE", namespace["name"])
+
+    with single_metric(**metric) as my_metrics:
+        my_metrics.add_dimension(**dimension)
+        monkeypatch.delenv("POWERTOOLS_METRICS_NAMESPACE")
+
+    output = json.loads(capsys.readouterr().out.strip())
+    expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
+
+    # Timestamp will always be different
+    del expected["_aws"]["Timestamp"]
+    del output["_aws"]["Timestamp"]
+    assert expected["_aws"] == output["_aws"]
+
+
 def test_log_metrics_schema_error(capsys, metrics, dimensions, namespace):
     # It should error out because by default log_metrics doesn't invoke a function
     # so when decorator runs it'll raise an error while trying to serialize metrics
