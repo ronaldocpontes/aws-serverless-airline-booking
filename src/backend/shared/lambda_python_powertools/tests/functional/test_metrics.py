@@ -285,3 +285,15 @@ def test_schema_no_metrics(capsys, dimensions, namespace):
         my_metrics.add_dimension(**dimension)
     with pytest.raises(SchemaValidationError):
         my_metrics.serialize_metric_set()
+
+
+def test_exceed_number_of_dimensions(metric, namespace):
+    dimensions = []
+    for i in range(11):
+        dimensions.append({"name": f"test_{i}", "value": "test"})
+
+    with pytest.raises(SchemaValidationError):
+        with single_metric(**metric) as m:
+            m.add_namespace(**namespace)
+            for dimension in dimensions:
+                m.add_dimension(**dimension)
