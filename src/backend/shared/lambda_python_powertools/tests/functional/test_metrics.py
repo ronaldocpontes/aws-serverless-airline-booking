@@ -1,4 +1,3 @@
-import io
 import json
 from typing import Dict, List
 
@@ -14,11 +13,6 @@ from lambda_python_powertools.metrics import (
     single_metric,
 )
 from lambda_python_powertools.metrics.base import MetricManager
-
-
-@pytest.fixture
-def stdout():
-    return io.StringIO()
 
 
 @pytest.fixture
@@ -114,7 +108,7 @@ def test_single_metric_one_metric_only(capsys, metric, dimension, namespace):
     assert expected["_aws"] == output["_aws"]
 
 
-def test_multiple_metrics(capsys, metrics, dimensions, namespace):
+def test_multiple_metrics(metrics, dimensions, namespace):
     my_metrics = Metrics()
     for metric in metrics:
         my_metrics.add_metric(**metric)
@@ -130,7 +124,7 @@ def test_multiple_metrics(capsys, metrics, dimensions, namespace):
     assert expected["_aws"] == output["_aws"]
 
 
-def test_multiple_namespaces(capsys, metric, dimension, namespace):
+def test_multiple_namespaces(metric, dimension, namespace):
     namespace_a = {"name": "OtherNamespace"}
     namespace_b = {"name": "AnotherNamespace"}
 
@@ -237,7 +231,7 @@ def test_metrics_spillover(capsys, metric, dimension, namespace, a_hundred_metri
     assert spillover_metrics["_aws"] == expected_spillover_metrics["_aws"]
 
 
-def test_log_metrics_schema_error(capsys, metrics, dimensions, namespace):
+def test_log_metrics_schema_error(metrics, dimensions, namespace):
     # It should error out because by default log_metrics doesn't invoke a function
     # so when decorator runs it'll raise an error while trying to serialize metrics
     my_metrics = Metrics()
@@ -255,7 +249,7 @@ def test_log_metrics_schema_error(capsys, metrics, dimensions, namespace):
         lambda_handler({}, {})
 
 
-def test_incorrect_metric_unit(capsys, metric, dimension, namespace):
+def test_incorrect_metric_unit(metric, dimension, namespace):
     metric["unit"] = "incorrect_unit"
 
     with pytest.raises(MetricUnitError):
@@ -264,13 +258,13 @@ def test_incorrect_metric_unit(capsys, metric, dimension, namespace):
             m.add_namespace(**namespace)
 
 
-def test_schema_no_namespace(capsys, metric, dimension):
+def test_schema_no_namespace(metric, dimension):
     with pytest.raises(SchemaValidationError):
         with single_metric(**metric) as m:
             m.add_dimension(**dimension)
 
 
-def test_schema_incorrect_value(capsys, metric, dimension, namespace):
+def test_schema_incorrect_value(metric, dimension, namespace):
     metric["value"] = "some_value"
     with pytest.raises(MetricValueError):
         with single_metric(**metric) as m:
@@ -278,7 +272,7 @@ def test_schema_incorrect_value(capsys, metric, dimension, namespace):
             m.add_namespace(**namespace)
 
 
-def test_schema_no_metrics(capsys, dimensions, namespace):
+def test_schema_no_metrics(dimensions, namespace):
     my_metrics = Metrics()
     my_metrics.add_namespace(**namespace)
     for dimension in dimensions:

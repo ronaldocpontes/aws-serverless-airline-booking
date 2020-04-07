@@ -182,5 +182,3 @@ class MetricUnit(Enum):
     Terabitspersecond = "Second"
     countpersecond = "Second"
     Countpersecond = "Second"
-
-

@@ -9,7 +9,12 @@ import jsonschema
 
 from lambda_python_powertools.helper.models import MetricUnit
 
-from .exceptions import MetricUnitError, MetricValueError, SchemaValidationError, UniqueNamespaceError
+from .exceptions import (
+    MetricUnitError,
+    MetricValueError,
+    SchemaValidationError,
+    UniqueNamespaceError,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -156,7 +161,9 @@ class MetricManager:
             Metric namespace
         """
         if self.namespace is not None:
-            raise UniqueNamespaceError(f"Namespace '{self.namespace}' already set - Only one namespace is allowed across metrics")
+            raise UniqueNamespaceError(
+                f"Namespace '{self.namespace}' already set - Only one namespace is allowed across metrics"
+            )
         logger.debug(f"Adding metrics namespace: {name}")
         self.namespace = name
 
