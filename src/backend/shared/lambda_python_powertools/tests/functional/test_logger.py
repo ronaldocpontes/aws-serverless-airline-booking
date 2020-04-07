@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from lambda_python_powertools.helper.exceptions import DeprecationError
 from lambda_python_powertools.logging import (
     MetricUnit,
     log_metric,
@@ -303,78 +304,9 @@ def test_inject_lambda_cold_start(root_logger, stdout, lambda_context):
     assert "false" == fourth_log["cold_start"]
 
 
-def test_log_metric(capsys):
+def test_log_metric_deprecation():
     # GIVEN a service, unit and value have been provided
     # WHEN log_metric is called
-    # THEN custom metric line should be match given values
-    log_metric(service="payment", name="test_metric", unit=MetricUnit.Seconds, value=60)
-    expected = "MONITORING|60|Seconds|test_metric|ServerlessAirline|service=payment\n"
-    captured = capsys.readouterr()
-
-    assert captured.out == expected
-
-
-def test_log_metric_env_var(monkeypatch, capsys):
-    # GIVEN a service, unit and value have been provided
-    # WHEN log_metric is called
-    # THEN custom metric line should be match given values
-    service_name = "payment"
-    monkeypatch.setenv("POWERTOOLS_SERVICE_NAME", service_name)
-
-    log_metric(name="test_metric", unit=MetricUnit.Seconds, value=60)
-    expected = "MONITORING|60|Seconds|test_metric|ServerlessAirline|service=payment\n"
-    captured = capsys.readouterr()
-
-    assert captured.out == expected
-
-
-def test_log_metric_multiple_dimensions(capsys):
-    # GIVEN multiple optional dimensions are provided
-    # WHEN log_metric is called
-    # THEN dimensions should appear as dimenion=value
-    log_metric(
-        name="test_metric", unit=MetricUnit.Seconds, value=60, customer="abc", charge_id="123"
-    )
-    expected = "MONITORING|60|Seconds|test_metric|ServerlessAirline|service=service_undefined,customer=abc,charge_id=123\n"
-    captured = capsys.readouterr()
-
-    assert captured.out == expected
-
-
-@pytest.mark.parametrize(
-    "invalid_input,expected",
-    [
-        (
-            {"unit": "seconds"},
-            "MONITORING|0|Seconds|test_metric|ServerlessAirline|service=service_undefined\n",
-        ),
-        (
-            {"unit": "Seconds", "customer": None, "charge_id": "123", "payment_status": ""},
-            "MONITORING|0|Seconds|test_metric|ServerlessAirline|service=service_undefined,charge_id=123\n",
-        ),
-    ],
-    ids=["metric unit as string lower case", "empty dimension value"],
-)
-def test_log_metric_partially_correct_args(capsys, invalid_input, expected):
-    # GIVEN invalid arguments are provided such as empty dimension values and metric units in strings
-    # WHEN log_metric is called
-    # THEN default values should be used such as "Count" as a unit, invalid dimensions not included
-    # and no exception raised
-    log_metric(name="test_metric", **invalid_input)
-    captured = capsys.readouterr()
-
-    assert captured.out == expected
-
-
-@pytest.mark.parametrize(
-    "invalid_input,expected",
-    [({"unit": "Blah"}, ValueError), ({"unit": None}, ValueError), ({}, TypeError)],
-    ids=["invalid metric unit as str", "unit as None", "missing required unit"],
-)
-def test_log_metric_invalid_unit(invalid_input, expected):
-    # GIVEN invalid units are provided
-    # WHEN log_metric is called
-    # THEN ValueError exception should be raised
-
-    with pytest.raises(expected):
-        log_metric(name="test_metric", **invalid_input)
+    # THEN raise a DeprecationError
+    with pytest.raises(DeprecationError):
+        log_metric(service="payment", name="test_metric", unit=MetricUnit.Seconds, value=60)

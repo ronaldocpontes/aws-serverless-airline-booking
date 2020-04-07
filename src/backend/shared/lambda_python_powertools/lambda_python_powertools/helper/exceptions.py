@@ -1,0 +1,2 @@
+class DeprecationError(Exception):
+    pass
