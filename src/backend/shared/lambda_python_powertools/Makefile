@@ -15,7 +15,7 @@ lint: format
 	pipenv run flake8
 
 test:
-	pipenv run pytest
+	pipenv run pytest -vvv
 
 test-html:
 	pipenv run pytest --cov-report html
