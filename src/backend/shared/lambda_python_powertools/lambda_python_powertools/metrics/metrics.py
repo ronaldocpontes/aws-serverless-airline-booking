@@ -139,7 +139,7 @@ class Metrics(MetricManager):
                     lambda_handler(*args, **kwargs)
                 metrics = self.serialize_metric_set()
                 logger.debug("Publishing metrics", {"metrics": metrics})
-                print(json.dumps(metrics, indent=4))
+                print(json.dumps(metrics))
             except Exception as e:
                 logger.error(e)
                 raise e

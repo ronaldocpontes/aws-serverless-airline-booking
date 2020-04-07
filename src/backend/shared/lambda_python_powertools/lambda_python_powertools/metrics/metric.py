@@ -112,4 +112,4 @@ def single_metric(name: str, unit: MetricUnit, value: float):
         raise e
     finally:
         logger.debug("Publishing single metric", {"metric": metric})
-        print(json.dumps(metric_set, indent=4))
+        print(json.dumps(metric_set))

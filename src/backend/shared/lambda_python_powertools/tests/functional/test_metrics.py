@@ -22,12 +22,12 @@ def stdout():
 
 
 @pytest.fixture
-def metric():
+def metric() -> Dict[str, str]:
     return {"name": "single_metric", "unit": MetricUnit.Count, "value": 1}
 
 
 @pytest.fixture
-def metrics():
+def metrics() -> List[Dict[str, str]]:
     return [
         {"name": "metric_one", "unit": MetricUnit.Count, "value": 1},
         {"name": "metric_two", "unit": MetricUnit.Count, "value": 1},
@@ -35,12 +35,12 @@ def metrics():
 
 
 @pytest.fixture
-def dimension():
+def dimension() -> Dict[str, str]:
     return {"name": "test_dimension", "value": "test"}
 
 
 @pytest.fixture
-def dimensions():
+def dimensions() -> List[Dict[str, str]]:
     return [
         {"name": "test_dimension", "value": "test"},
         {"name": "test_dimension_2", "value": "test"},
@@ -48,8 +48,17 @@ def dimensions():
 
 
 @pytest.fixture
-def namespace():
+def namespace() -> Dict[str, str]:
     return {"name": "test_namespace"}
+
+
+@pytest.fixture
+def a_hundred_metrics() -> List[Dict[str, str]]:
+    metrics = []
+    for i in range(100):
+        metrics.append({"name": f"metric_{i}", "unit": "Count", "value": 1})
+
+    return metrics
 
 
 def serialize_metrics(metrics: List[Dict], dimensions: List[Dict], namespace: Dict) -> Dict:
@@ -72,6 +81,11 @@ def serialize_single_metric(metric: Dict, dimension: Dict, namespace: Dict) -> D
     my_metrics.add_dimension(**dimension)
     my_metrics.add_namespace(**namespace)
     return my_metrics.serialize_metric_set()
+
+
+def remove_timestamp(metrics: List):
+    for metric in metrics:
+        del metric["_aws"]["Timestamp"]
 
 
 def test_single_metric(capsys, metric, dimension, namespace):
@@ -193,6 +207,46 @@ def test_namespace_env_var(monkeypatch, capsys, metric, dimension, namespace):
     del expected["_aws"]["Timestamp"]
     del output["_aws"]["Timestamp"]
     assert expected["_aws"] == output["_aws"]
+
+
+def test_metrics_spillover(capsys, metric, dimension, namespace, a_hundred_metrics):
+    my_metrics = Metrics()
+    my_metrics.add_namespace(**namespace)
+    my_metrics.add_dimension(**dimension)
+
+    for _metric in a_hundred_metrics:
+        my_metrics.add_metric(**_metric)
+
+    @my_metrics.log_metrics(call_function=True)
+    def lambda_handler(evt, handler):
+        my_metrics.add_metric(**metric)
+        return True
+
+    lambda_handler({}, {})
+
+    output = capsys.readouterr().out.strip()
+    spillover_metrics, single_metric = output.split("\n")
+    spillover_metrics = json.loads(spillover_metrics)
+    single_metric = json.loads(single_metric)
+
+    expected_single_metric = serialize_single_metric(
+        metric=metric, dimension=dimension, namespace=namespace
+    )
+    expected_spillover_metrics = serialize_metrics(
+        metrics=a_hundred_metrics, dimensions=[dimension], namespace=namespace
+    )
+
+    remove_timestamp(
+        metrics=[
+            spillover_metrics,
+            expected_spillover_metrics,
+            single_metric,
+            expected_single_metric,
+        ]
+    )
+
+    assert single_metric["_aws"] == expected_single_metric["_aws"]
+    assert spillover_metrics["_aws"] == expected_spillover_metrics["_aws"]
 
 
 def test_log_metrics_schema_error(capsys, metrics, dimensions, namespace):

@@ -190,7 +190,8 @@ class MetricManager:
         if len(self.metric_set) == 100:
             logger.debug("Exceeded maximum of 100 metrics - Publishing existing metric set")
             metrics = self.serialize_metric_set()
-            print(json.dumps(metrics, indent=4))
+            print(json.dumps(metrics))
+            self.metric_set = {}
 
         if not isinstance(value, numbers.Number):
             raise MetricValueError(f"{value} is not a valid number")
