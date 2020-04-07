@@ -147,8 +147,7 @@ def test_log_metrics_no_function_call(capsys, metrics, dimensions, namespace):
         return True
 
     lambda_handler({}, {})
-
-    output = my_metrics.serialize_metric_set()
+    output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
     # Timestamp will always be different
@@ -171,7 +170,7 @@ def test_log_metrics_call_function(capsys, metrics, dimensions, namespace):
 
     lambda_handler({}, {})
 
-    output = my_metrics.serialize_metric_set()
+    output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
     # Timestamp will always be different
