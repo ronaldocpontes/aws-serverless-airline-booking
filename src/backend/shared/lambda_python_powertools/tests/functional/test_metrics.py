@@ -96,9 +96,7 @@ def test_single_metric(capsys, metric, dimension, namespace):
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
@@ -112,9 +110,7 @@ def test_single_metric_one_metric_only(capsys, metric, dimension, namespace):
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
@@ -130,9 +126,7 @@ def test_multiple_metrics(capsys, metrics, dimensions, namespace):
     output = my_metrics.serialize_metric_set()
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
@@ -164,9 +158,7 @@ def test_log_metrics_no_function_call(capsys, metrics, dimensions, namespace):
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
@@ -187,9 +179,7 @@ def test_log_metrics_call_function(capsys, metrics, dimensions, namespace):
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
@@ -203,9 +193,7 @@ def test_namespace_env_var(monkeypatch, capsys, metric, dimension, namespace):
     output = json.loads(capsys.readouterr().out.strip())
     expected = serialize_single_metric(metric=metric, dimension=dimension, namespace=namespace)
 
-    # Timestamp will always be different
-    del expected["_aws"]["Timestamp"]
-    del output["_aws"]["Timestamp"]
+    remove_timestamp(metrics=[output, expected])  # Timestamp will always be different
     assert expected["_aws"] == output["_aws"]
 
 
