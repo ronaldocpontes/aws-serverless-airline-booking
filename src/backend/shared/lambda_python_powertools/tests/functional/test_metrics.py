@@ -126,7 +126,7 @@ def test_multiple_namespaces(capsys, metric, dimension, namespace):
     namespace_a = {"name": "OtherNamespace"}
     namespace_b = {"name": "AnotherNamespace"}
 
-    with pytest.raises(UniqueNamespaceError):    
+    with pytest.raises(UniqueNamespaceError):
         with single_metric(**metric) as m:
             m.add_dimension(**dimension)
             m.add_namespace(**namespace)
@@ -134,27 +134,68 @@ def test_multiple_namespaces(capsys, metric, dimension, namespace):
             m.add_namespace(**namespace_b)
 
 
-# def test_log_metrics(capsys, metrics, dimensions, namespace):
-#     my_metrics = Metrics()
+def test_log_metrics_no_function_call(capsys, metrics, dimensions, namespace):
+    my_metrics = Metrics()
+    my_metrics.add_namespace(**namespace)
+    for metric in metrics:
+        my_metrics.add_metric(**metric)
+    for dimension in dimensions:
+        my_metrics.add_dimension(**dimension)
 
-#     @my_metrics.log_metrics
-#     def lambda_handler(evt, handler):
-#         my_metrics.add_namespace(namespace)
-#         for metric in metrics:
-#             my_metrics.add_metric(**metric)
-#         for dimension in dimensions:
-#             my_metrics.add_dimension(**dimension)
-#             return True
+    @my_metrics.log_metrics
+    def lambda_handler(evt, handler):
+        return True
 
-#     lambda_handler({}, {})
+    lambda_handler({}, {})
 
-# output = my_metrics.serialize_metric_set()
-# expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
+    output = my_metrics.serialize_metric_set()
+    expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
 
-# # Timestamp will always be different
-# del expected["_aws"]["Timestamp"]
-# del output["_aws"]["Timestamp"]
-# assert expected["_aws"] == output["_aws"]
+    # Timestamp will always be different
+    del expected["_aws"]["Timestamp"]
+    del output["_aws"]["Timestamp"]
+    assert expected["_aws"] == output["_aws"]
+
+
+def test_log_metrics_call_function(capsys, metrics, dimensions, namespace):
+    my_metrics = Metrics()
+
+    @my_metrics.log_metrics(call_function=True)
+    def lambda_handler(evt, handler):
+        my_metrics.add_namespace(**namespace)
+        for metric in metrics:
+            my_metrics.add_metric(**metric)
+        for dimension in dimensions:
+            my_metrics.add_dimension(**dimension)
+        return True
+
+    lambda_handler({}, {})
+
+    output = my_metrics.serialize_metric_set()
+    expected = serialize_metrics(metrics=metrics, dimensions=dimensions, namespace=namespace)
+
+    # Timestamp will always be different
+    del expected["_aws"]["Timestamp"]
+    del output["_aws"]["Timestamp"]
+    assert expected["_aws"] == output["_aws"]
+
+
+def test_log_metrics_schema_error(capsys, metrics, dimensions, namespace):
+    # It should error out because by default log_metrics doesn't invoke a function
+    # so when decorator runs it'll raise an error while trying to serialize metrics
+    my_metrics = Metrics()
+
+    @my_metrics.log_metrics
+    def lambda_handler(evt, handler):
+        my_metrics.add_namespace(namespace)
+        for metric in metrics:
+            my_metrics.add_metric(**metric)
+        for dimension in dimensions:
+            my_metrics.add_dimension(**dimension)
+            return True
+
+    with pytest.raises(SchemaValidationError):
+        lambda_handler({}, {})
 
 
 def test_incorrect_metric_unit(capsys, metric, dimension, namespace):
